@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>FitLab — Allenamenti & Diete (Pro)</title>
+
+<!-- Font -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+<!-- FontAwesome (CDN) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-Bx4m...==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+:root{
+  --bg:#071028; --panel:#0b1624; --muted:#98a8b9; --glass:rgba(255,255,255,0.03);
+  --accent:#00e0ff; --accent2:#7b61ff; --danger:#ff6b6b;
+  --radius:14px; color-scheme:dark;
+  font-family:"Poppins",system-ui,-apple-system,"Segoe UI",Roboto,Arial;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:
+ radial-gradient(800px 350px at 10% 10%,rgba(0,224,255,0.035),transparent),
+ linear-gradient(180deg,var(--bg),#020615); color:#eaf6ff;-webkit-font-smoothing:antialiased}
+.container{max-width:1100px;margin:28px auto;padding:18px;display:grid;grid-template-columns:1fr 360px;gap:20px}
+.header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;gap:12px;align-items:center}
+.logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:800;box-shadow:0 10px 30px rgba(0,0,0,0.6)}
+h1{margin:0;font-size:1.15rem}
+.lead{margin:0;color:var(--muted);font-size:0.9rem}
+
+/* layout */
+.main{display:flex;flex-direction:column;gap:16px}
+.card{background:linear-gradient(180deg,var(--panel),rgba(255,255,255,0.01));border-radius:var(--radius);padding:14px;box-shadow:0 8px 30px rgba(2,6,20,0.6)}
+.row{display:flex;gap:12px}
+.col-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.small{font-size:0.88rem;color:var(--muted)}
+.btn{background:linear-gradient(90deg,var(--accent),var(--accent2));border:0;padding:8px 12px;border-radius:10px;color:#021026;font-weight:700;cursor:pointer}
+.btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--accent)}
+.btn.sm{padding:6px 8px;font-size:0.9rem;border-radius:8px}
+
+.input, select, textarea{width:100%;padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+.preset{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:12px;background:var(--glass);transition:transform .16s}
+.preset:hover{transform:translateY(-6px)}
+.ex-list{display:flex;flex-direction:column;gap:8px;margin-top:10px;min-height:42px}
+.ex-item{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:10px;background:rgba(255,255,255,0.015);cursor:grab}
+.ex-item:active{cursor:grabbing}
+.handle{opacity:.9;margin-right:10px}
+.meta{color:var(--muted);font-size:0.9rem}
+
+/* player */
+.player{display:flex;flex-direction:column;gap:10px}
+.timer-display{font-size:2rem;font-weight:800;padding:10px;border-radius:12px;background:rgba(255,255,255,0.02);text-align:center}
+.progress{height:10px;background:rgba(255,255,255,0.03);border-radius:999px;overflow:hidden}
+.progress > i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .6s}
+
+/* right */
+aside{display:flex;flex-direction:column;gap:14px}
+.diet{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent)}
+.diet .row-top{display:flex;justify-content:space-between;align-items:center}
+.meal{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;background:rgba(255,255,255,0.01)}
+
+/* chart */
+.canvas-wrap{height:180px;border-radius:12px;padding:10px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent)}
+
+/* footer */
+.footer{font-size:0.85rem;color:var(--muted);text-align:center;margin-top:6px}
+
+/* responsive */
+@media(max-width:980px){ .container{grid-template-columns:1fr;padding:12px} aside{order:2} .main{order:1} }
+</style>
+</head>
+<body>
+
+<div class="container" role="application" aria-label="FitLab app">
+  <main class="main">
+    <header class="header">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"><i class="fa-solid fa-heart-pulse" style="color:white;font-size:20px"></i></div>
+        <div>
+          <h1>FitLab — Allenamenti & Diete</h1>
+          <div class="lead">Leggero, potente e pronto per GitHub Pages</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn.sm btn ghost" id="themeBtn"><i class="fa-regular fa-moon"></i></button>
+        <button class="btn.sm btn" id="exportAllBtn" title="Esporta backup JSON"><i class="fa-solid fa-download"></i></button>
+      </div>
+    </header>
+
+    <!-- PRESETS -->
+    <section class="card" aria-labelledby="presTitle">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <h2 id="presTitle" style="margin:0">Allenamenti</h2>
+          <div class="small">Scegli un preset o crea il tuo programma</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn.sm btn ghost" id="loadLocalBtn">Carica locale</button>
+          <button class="btn.sm btn" id="shareBtn" title="Copia link programma">Condividi</button>
+        </div>
+      </div>
+
+      <div id="presetList" style="margin-top:10px">
+        <!-- presets via JS -->
+      </div>
+
+      <hr style="opacity:.06;margin:12px 0">
+
+      <div class="col-2">
+        <div>
+          <label class="small">Nome esercizio</label>
+          <input id="exName" class="input" placeholder="es. Burpee">
+        </div>
+        <div>
+          <label class="small">Tipo</label>
+          <select id="exType" class="input">
+            <option value="reps">Ripetizioni</option>
+            <option value="time">Durata (s)</option>
+          </select>
+        </div>
+        <div>
+          <label class="small">Valore</label>
+          <input id="exValue" class="input" type="number" min="1" value="12">
+        </div>
+        <div>
+          <label class="small">Recupero (s)</label>
+          <input id="exRest" class="input" type="number" min="5" value="30">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn" id="addExBtn"><i class="fa-solid fa-plus"></i> Aggiungi</button>
+        <button class="btn ghost" id="saveProgBtn">Salva programma</button>
+        <input id="progName" class="input" placeholder="Nome programma..." style="flex:1">
+      </div>
+
+      <div class="ex-list card" id="exList" style="margin-top:12px"></div>
+    </section>
+
+    <!-- PLAYER -->
+    <section class="card">
+      <h2 style="margin:0">Player & Timer</h2>
+      <div class="small" style="margin-bottom:8px">Start → esercizio → recupero → prossimo esercizio</div>
+
+      <div class="player">
+        <div class="timer-display" id="timerDisplay">00:00</div>
+        <div style="display:flex;gap:8px;justify-content:center">
+          <button class="btn" id="startBtn"><i class="fa-solid fa-play"></i> Start</button>
+          <button class="btn ghost" id="pauseBtn"><i class="fa-solid fa-pause"></i> Pausa</button>
+          <button class="btn ghost" id="skipBtn"><i class="fa-solid fa-forward"></i> Salta</button>
+          <button class="btn ghost" id="stopBtn"><i class="fa-solid fa-stop"></i> Stop</button>
+        </div>
+        <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+        <div class="small" id="currentLabel">Nessun esercizio</div>
+      </div>
+    </section>
+
+    <!-- STATS -->
+    <section class="card">
+      <h3 style="margin:0">Statistiche</h3>
+      <div class="small">Aggiungi calorie giornaliere e guarda il grafico</div>
+      <div class="canvas-wrap" style="margin-top:8px"><canvas id="calChart" width="400" height="160"></canvas></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input id="calInput" class="input" placeholder="Aggiungi calorie (kcal)">
+        <button class="btn" id="addCalBtn">Aggiungi</button>
+      </div>
+    </section>
+
+  </main>
+
+  <aside>
+    <!-- DIETS -->
+    <section class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 style="margin:0">Diete</h3>
+        <div class="small">3 piani</div>
+      </div>
+
+      <div id="dietWrap" style="margin-top:10px">
+        <!-- via JS -->
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn" id="applyDietBtn">Applica dieta</button>
+        <button class="btn ghost" id="exportDietBtn">Esporta dieta</button>
+      </div>
+    </section>
+
+    <!-- MEALS -->
+    <section class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 style="margin:0">Tracker Pasti</h3>
+        <div class="small">Oggi</div>
+      </div>
+      <div id="meals" style="margin-top:10px"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn" id="clearMealsBtn">Pulisci</button>
+        <button class="btn ghost" id="notifyMealBtn">Notifica</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h4 style="margin:0">Backup</h4>
+      <div class="small">Salva/Importa i dati locali</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn" id="saveBtn">Salva</button>
+        <button class="btn ghost" id="importBtn">Importa</button>
+      </div>
+      <div class="footer">Versione: 2.0 — Dati in localStorage</div>
+    </section>
+  </aside>
+</div>
+
+<script>
+/* =========================
+   FitLab — nuovo codice (da 0)
+   Features:
+   - presets + builder (drag & drop)
+   - player con step & rest + suoni
+   - notifiche desktop
+   - 3 diete + tracker pasti
+   - chart calorie (Chart.js)
+   - localStorage save/export/import
+   ========================= */
+
+const qs = s => document.querySelector(s);
+const qsa = s => Array.from(document.querySelectorAll(s));
+const fmtTime = s => (Math.floor(s/60)).toString().padStart(2,'0') + ':' + (s%60).toString().padStart(2,'0');
+
+// --- initial data
+const PRESETS = [
+  {id:'p20',name:'20 min HIIT',desc:'Circuito rapido',ex:[
+    {name:'Jumping Jacks',type:'time',value:40,rest:20},
+    {name:'Push-up',type:'reps',value:15,rest:30},
+    {name:'Squat',type:'reps',value:20,rest:30}
+  ]},
+  {id:'p45',name:'45 min Forza',desc:'Forza e resistenza',ex:[
+    {name:'Corsa leggera',type:'time',value:600,rest:60},
+    {name:'Affondi',type:'reps',value:20,rest:45},
+    {name:'Plank',type:'time',value:60,rest:30}
+  ]},
+  {id:'p60',name:'60 min Total Body',desc:'Full body',ex:[
+    {name:'Riscaldamento',type:'time',value:300,rest:60},
+    {name:'Circuito',type:'time',value:1200,rest:120},
+    {name:'Defaticamento',type:'time',value:300,rest:30}
+  ]}
+];
+
+const DIETS = [
+  {id:'med',title:'Mediterranea',short:'Bilanciata',desc:'Frutta, verdura, legumi, pesce, olio d\\'oliva',
+   day:[
+     {meal:'Colazione',items:['Yogurt','Pane integrale','Frutta']},
+     {meal:'Spuntino',items:['Mandorle']},
+     {meal:'Pranzo',items:['Insalata di legumi','Pane integrale']},
+     {meal:'Merenda',items:['Hummus']},
+     {meal:'Cena',items:['Pesce','Verdure']}
+   ]},
+  {id:'lowc',title:'Low-Carb',short:'Pochi carboidrati',desc:'Più proteine e grassi sani',
+   day:[
+     {meal:'Colazione',items:['Uova','Avocado']},
+     {meal:'Spuntino',items:['Formaggio']},
+     {meal:'Pranzo',items:['Pollo','Verdure']},
+     {meal:'Merenda',items:['Yogurt greco']},
+     {meal:'Cena',items:['Salmone','Broccoli']}
+   ]},
+  {id:'veg',title:'Vegana',short:'100% vegetale',desc:'Legumi, tofu, semi',
+   day:[
+     {meal:'Colazione',items:['Porridge','Latte vegetale']},
+     {meal:'Spuntino',items:['Semi e noci']},
+     {meal:'Pranzo',items:['Buddha bowl']},
+     {meal:'Merenda',items:['Barretta datteri']},
+     {meal:'Cena',items:['Tofu','Riso integrale']}
+   ]}
+];
+
+// --- state and storage
+const State = {
+  builder: JSON.parse(localStorage.getItem('fl_builder')||'[]'),
+  programs: JSON.parse(localStorage.getItem('fl_programs')||'{}'),
+  activeDiet: localStorage.getItem('fl_activeDiet') || 'med',
+  meals: JSON.parse(localStorage.getItem('fl_meals')||'{}'),
+  calories: JSON.parse(localStorage.getItem('fl_calories')||'{"dates":[],"values":[]}'),
+  playing:false, timer:null, currentIndex:0, playList:[]
+};
+
+// --- DOM references
+const presetListEl = qs('#presetList'), exListEl = qs('#exList');
+const addExBtn = qs('#addExBtn'), saveProgBtn = qs('#saveProgBtn'), progNameEl = qs('#progName');
+const startBtn = qs('#startBtn'), pauseBtn = qs('#pauseBtn'), stopBtn = qs('#stopBtn'), skipBtn = qs('#skipBtn');
+const timerDisplay = qs('#timerDisplay'), bar = qs('#bar'), currentLabel = qs('#currentLabel');
+const dietWrap = qs('#dietWrap'), mealsEl = qs('#meals');
+const calChartCtx = qs('#calChart').getContext('2d'), addCalBtn = qs('#addCalBtn'), calInput = qs('#calInput');
+const themeBtn = qs('#themeBtn'), exportAllBtn = qs('#exportAllBtn');
+const shareBtn = qs('#shareBtn'), loadLocalBtn = qs('#loadLocalBtn');
+
+// --- audio beeps via WebAudio
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function beep(freq=440,dur=0.12,vol=0.15){
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type='sine'; o.frequency.value = freq; g.gain.value = vol;
+  o.connect(g); g.connect(audioCtx.destination); o.start(); setTimeout(()=>{ o.stop(); }, dur*1000);
+}
+
+// --- render functions
+function renderPresets(){
+  presetListEl.innerHTML = '';
+  PRESETS.forEach(p=>{
+    const div = document.createElement('div'); div.className='preset';
+    div.innerHTML = `<div>
+      <strong>${p.name}</strong><div class="small">${p.desc}</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn.sm btn ghost" data-id="${p.id}" data-action="load">Carica</button>
+      <button class="btn.sm btn" data-id="${p.id}" data-action="start">Avvia</button>
+    </div>`;
+    presetListEl.appendChild(div);
+  });
+  renderSavedPrograms();
+}
+
+function renderBuilder(){
+  exListEl.innerHTML = '';
+  if(State.builder.length===0){ exListEl.innerHTML='<div class="small">Nessun esercizio</div>'; return; }
+  State.builder.forEach((ex,i)=>{
+    const el = document.createElement('div'); el.className='ex-item'; el.draggable=true; el.dataset.idx=i;
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:10px">
+      <span class="handle"><i class="fa-solid fa-grip-lines"></i></span>
+      <div><strong>${ex.name}</strong><div class="meta">${ex.type==='time'? ex.value+'s' : ex.value+' rip'} • rest ${ex.rest}s</div></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn.sm btn ghost" data-action="up" data-idx=${i}>↑</button>
+      <button class="btn.sm btn ghost" data-action="down" data-idx=${i}>↓</button>
+      <button class="btn.sm btn" data-action="del" data-idx=${i}><i class="fa-solid fa-trash"></i></button>
+    </div>`;
+    exListEl.appendChild(el);
+  });
+}
+
+// drag & drop simple
+let dragIdx = null;
+exListEl.addEventListener('dragstart', e => {
+  const it = e.target.closest('.ex-item'); if(!it) return;
+  dragIdx = Number(it.dataset.idx); it.style.opacity='0.5';
+});
+exListEl.addEventListener('dragend', e => { const it = e.target.closest('.ex-item'); if(it) it.style.opacity='1'; dragIdx=null; });
+exListEl.addEventListener('dragover', e => e.preventDefault());
+exListEl.addEventListener('drop', e => {
+  const target = e.target.closest('.ex-item'); if(!target || dragIdx===null) return;
+  const dst = Number(target.dataset.idx); const [moved] = State.builder.splice(dragIdx,1); State.builder.splice(dst,0,moved);
+  saveBuilder(); renderBuilder();
+});
+
+// preset actions
+presetListEl.addEventListener('click', e => {
+  const btn = e.target.closest('button'); if(!btn) return;
+  const id = btn.dataset.id, action = btn.dataset.action;
+  const preset = PRESETS.find(p=>p.id===id);
+  if(action==='load'){ State.builder = JSON.parse(JSON.stringify(preset.ex)); saveBuilder(); renderBuilder(); window.scrollTo({top:0,behavior:'smooth'}); }
+  if(action==='start'){ queueAndStart(preset.ex); }
+});
+
+// builder controls
+qs('#addExBtn').addEventListener('click', () => {
+  const name = qs('#exName').value.trim(); const type = qs('#exType').value; const value = Number(qs('#exValue').value) || 10; const rest = Number(qs('#exRest').value) || 30;
+  if(!name) return alert("Inserisci nome esercizio");
+  State.builder.push({name,type,value,rest}); saveBuilder(); renderBuilder();
+  qs('#exName').value=''; qs('#exValue').value = type==='time' ? 40 : 12;
+});
+exListEl.addEventListener('click', e => {
+  const btn = e.target.closest('button'); if(!btn) return;
+  const idx = Number(btn.dataset.idx), action = btn.dataset.action;
+  if(action==='up' && idx>0){ State.builder.splice(idx-1,0,State.builder.splice(idx,1)[0]); saveBuilder(); renderBuilder(); }
+  if(action==='down' && idx < State.builder.length-1){ State.builder.splice(idx+1,0,State.builder.splice(idx,1)[0]); saveBuilder(); renderBuilder(); }
+  if(action==='del'){ if(confirm('Elimina esercizio?')){ State.builder.splice(idx,1); saveBuilder(); renderBuilder(); } }
+});
+
+// save program
+saveProgBtn.addEventListener('click', () => {
+  if(State.builder.length===0) return alert('Nessun esercizio da salvare');
+  const name = (progNameEl.value||('Programma ' + new Date().toLocaleString())).trim(); const id = 'pr_' + Date.now();
+  State.programs[id] = {id,name,ex: JSON.parse(JSON.stringify(State.builder))};
+  localStorage.setItem('fl_programs', JSON.stringify(State.programs)); State.builder=[]; saveBuilder(); renderBuilder(); progNameEl.value=''; renderPresets(); alert('Programma salvato');
+});
+
+function renderSavedPrograms(){
+  const saved = Object.values(State.programs||{});
+  if(saved.length===0) return;
+  const wrap = document.createElement('div'); wrap.style.marginTop='8px';
+  wrap.innerHTML = '<div class="small" style="margin-bottom:6px"><strong>Programmi salvati</strong></div>';
+  saved.forEach(p=> {
+    const d = document.createElement('div'); d.className='preset'; d.style.marginTop='6px';
+    d.innerHTML = `<div><strong>${p.name}</strong><div class="small">${p.ex.length} esercizi</div></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn.sm btn ghost" data-id="${p.id}" data-act="loadSaved">Carica</button>
+        <button class="btn.sm btn" data-id="${p.id}" data-act="startSaved">Avvia</button>
+        <button class="btn.sm btn ghost" data-id="${p.id}" data-act="shareSaved">Link</button>
+      </div>`;
+    wrap.appendChild(d);
+  });
+  presetListEl.appendChild(wrap);
+}
+
+// saved programs actions
+presetListEl.addEventListener('click', e => {
+  const btn = e.target.closest('button'); if(!btn) return;
+  const id = btn.dataset.id, act = btn.dataset.act;
+  if(!act) return;
+  const p = State.programs[id];
+  if(!p) return alert('Programma non trovato');
+  if(act==='loadSaved'){ State.builder = JSON.parse(JSON.stringify(p.ex)); saveBuilder(); renderBuilder(); }
+  if(act==='startSaved'){ queueAndStart(p.ex); }
+  if(act==='shareSaved'){ const payload = {id:p.id, name:p.name, ex:p.ex}; const uri = 'data:application/json,' + encodeURIComponent(JSON.stringify(payload)); navigator.clipboard?.writeText(location.origin + location.pathname + '#data=' + encodeURIComponent(JSON.stringify(payload))).then(()=> alert('Link copiato'), ()=> prompt('Copia link:', location.origin + location.pathname + '#data=' + encodeURIComponent(JSON.stringify(payload)))); }
+});
+
+// queue & player
+function queueAndStart(list){
+  State.playList = JSON.parse(JSON.stringify(list)); State.currentIndex = 0; startNext();
+}
+let stepTimer = null;
+function startNext(){
+  if(State.currentIndex >= State.playList.length){ notify('Programma completato','Bravo!'); stop(); return; }
+  const ex = State.playList[State.currentIndex];
+  const label = `${ex.name} • ${ex.type==='time'? ex.value+'s' : ex.value+' rip'}`;
+  currentLabel.textContent = label;
+  let duration = ex.type==='time'? Number(ex.value) : 10; // simulate reps as 10s
+  startCountdown(duration, ()=> { // after exercise => rest
+    beep(880,0.08); // finish exercise
+    let rest = Number(ex.rest)||20;
+    startCountdown(rest, ()=> {
+      State.currentIndex++; bar.style.width = Math.round((State.currentIndex / State.playList.length)*100) + '%';
+      startNext();
+    }, 'RECUPERO');
+  }, 'ESERCIZIO');
+  beep(1200,0.07); notify('Inizio esercizio', ex.name);
+}
+function startCountdown(seconds, onComplete, tag){
+  if(stepTimer) clearInterval(stepTimer);
+  let rem = seconds;
+  timerDisplay.textContent = fmtTime(rem);
+  stepTimer = setInterval(()=> { rem--; timerDisplay.textContent = fmtTime(rem); if(rem<=0){ clearInterval(stepTimer); stepTimer=null; timerDisplay.textContent='00:00'; if(onComplete) onComplete(); } }, 1000);
+  State.playing = true;
+}
+startBtn.addEventListener('click', ()=> { if(State.playList.length===0){ if(State.builder.length===0) return alert('Aggiungi esercizi o carica un programma'); queueAndStart(State.builder); } else { if(!State.playing) startNext(); } });
+pauseBtn.addEventListener('click', ()=> { if(stepTimer) { clearInterval(stepTimer); stepTimer=null; State.playing=false; notify('In pausa','Hai messo in pausa il timer'); }});
+stopBtn.addEventListener('click', ()=> stop());
+skipBtn.addEventListener('click', ()=> { if(State.playList.length>0){ if(stepTimer){ clearInterval(stepTimer); stepTimer=null; } State.currentIndex++; startNext(); }});
+
+function stop(){ if(stepTimer) clearInterval(stepTimer); stepTimer=null; State.playList=[]; State.currentIndex=0; State.playing=false; bar.style.width='0%'; timerDisplay.textContent='00:00'; currentLabel.textContent='Nessun esercizio'; }
+
+// notifications
+function notify(title, body){
+  if(!("Notification" in window)) return;
+  if(Notification.permission === 'granted') { new Notification(title, {body}); }
+  else if(Notification.permission !== 'denied') Notification.requestPermission();
+}
+if("Notification" in window && Notification.permission === 'default'){ Notification.requestPermission().catch(()=>{}); }
+
+// beeps on user interaction require AudioContext resume on gesture
+document.addEventListener('click', ()=> { if(audioCtx.state === 'suspended') audioCtx.resume(); }, {once:true});
+
+// --- diets render
+function renderDiets(){
+  dietWrap.innerHTML = '';
+  DIETS.forEach(d=>{
+    const el = document.createElement('div'); el.className='diet';
+    el.innerHTML = `<div class="row-top">
+      <div><strong>${d.title}</strong><div class="small">${d.short}</div></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn.sm btn ghost" data-id="${d.id}" data-act="show">Dettagli</button>
+        <button class="btn.sm btn" data-id="${d.id}" data-act="select">${State.activeDiet===d.id?'Attiva ✓':'Seleziona'}</button>
+      </div>
+    </div>
+    <div class="small" id="diet_${d.id}" style="display:none;margin-top:6px">${d.desc}<div style="margin-top:8px">${d.day.map(m=>`<div><strong>${m.meal}</strong><div class="small">${m.items.join(' • ')}</div></div>`).join('')}</div></div>`;
+    dietWrap.appendChild(el);
+  });
+}
+dietWrap.addEventListener('click', e => {
+  const btn = e.target.closest('button'); if(!btn) return;
+  const id = btn.dataset.id, act = btn.dataset.act;
+  const diet = DIETS.find(x=>x.id===id);
+  if(act==='show'){ const d = qs('#diet_'+id); if(d.style.display==='block'){ d.style.display='none'; btn.textContent='Dettagli'; } else { d.style.display='block'; btn.textContent='Chiudi'; } }
+  if(act==='select'){ State.activeDiet = id; localStorage.setItem('fl_activeDiet', id); renderDiets(); renderMeals(); alert('Dieta selezionata: ' + diet.title); }
+});
+
+// meals tracker
+function renderMeals(){
+  mealsEl.innerHTML = '';
+  const diet = DIETS.find(d=>d.id===State.activeDiet) || DIETS[0];
+  diet.day.forEach(m=>{
+    const id = `${State.activeDiet}_${m.meal}`;
+    const checked = !!State.meals[id];
+    const div = document.createElement('div'); div.className='meal';
+    div.innerHTML = `<div><strong>${m.meal}</strong><div class="small">${m.items.join(' • ')}</div></div>
+      <div><input type="checkbox" data-id="${id}" ${checked?'checked':''}></div>`;
+    mealsEl.appendChild(div);
+  });
+}
+mealsEl.addEventListener('change', e => {
+  const id = e.target.dataset.id; if(!id) return;
+  State.meals[id] = e.target.checked; localStorage.setItem('fl_meals', JSON.stringify(State.meals));
+});
+qs('#clearMealsBtn').addEventListener('click', ()=> { if(confirm('Pulisci pasti di oggi?')){ State.meals = {}; localStorage.setItem('fl_meals', JSON.stringify(State.meals)); renderMeals(); }});
+qs('#notifyMealBtn').addEventListener('click', ()=> notify('Pasto registrato','Hai segnato il pasto di oggi'));
+
+// chart (calories)
+const chart = new Chart(calChartCtx, {
+  type:'bar',
+  data:{ labels: State.calories.dates || [], datasets:[{label:'Calorie', data: State.calories.values || [], backgroundColor:'rgba(0,224,255,0.18)', borderRadius:6}]},
+  options:{responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:'#cfeeff'}},y:{ticks:{color:'#cfeeff'},grid:{color:'rgba(255,255,255,0.03)'}}},plugins:{legend:{display:false}}}
+});
+function updateChart(){ chart.data.labels = State.calories.dates; chart.data.datasets[0].data = State.calories.values; chart.update(); }
+addCalBtn.addEventListener('click', ()=> {
+  const v = Number(calInput.value); if(!v || v<=0) return alert('Inserisci un valore kcal valido');
+  const d = new Date().toLocaleDateString();
+  const last = State.calories.dates[State.calories.dates.length-1];
+  if(last === d){ State.calories.values[State.calories.values.length-1] += v; }
+  else { State.calories.dates.push(d); State.calories.values.push(v); }
+  localStorage.setItem('fl_calories', JSON.stringify(State.calories)); calInput.value=''; updateChart();
+});
+
+// theme toggle (simple)
+themeBtn.addEventListener('click', ()=> {
+  const root = document.documentElement;
+  if(root.style.getPropertyValue('--bg') === '#071028' || root.style.getPropertyValue('--bg')===''){
+    root.style.setProperty('--bg','#f7fafc'); root.style.setProperty('--panel','#ffffff'); root.style.setProperty('--muted','#58666f'); document.body.style.color = '#022';
+  } else {
+    root.style.setProperty('--bg','#071028'); root.style.setProperty('--panel','#0b1624'); root.style.setProperty('--muted','#98a8b9'); document.body.style.color = '#eaf6ff';
+  }
+});
+
+// export/import & share
+exportAllBtn.addEventListener('click', ()=> {
+  const payload = {builder:State.builder, programs:State.programs, meals:State.meals, calories:State.calories, activeDiet:State.activeDiet, exportedAt: new Date().toISOString()};
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'}); const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'fitlab-backup-'+Date.now()+'.json'; a.click(); URL.revokeObjectURL(url);
+});
+qs('#importBtn').addEventListener('click', ()=> {
+  const txt = prompt('Incolla JSON di backup o data-URI:');
+  if(!txt) return;
+  try{
+    const obj = JSON.parse(txt.startsWith('data:') ? decodeURIComponent(txt.split(',')[1]) : txt);
+    if(obj.builder) State.builder = obj.builder; if(obj.programs) State.programs = obj.programs; if(obj.meals) State.meals = obj.meals;
+    if(obj.calories) State.calories = obj.calories; if(obj.activeDiet) State.activeDiet = obj.activeDiet;
+    localStorage.setItem('fl_builder', JSON.stringify(State.builder)); localStorage.setItem('fl_programs', JSON.stringify(State.programs));
+    localStorage.setItem('fl_meals', JSON.stringify(State.meals)); localStorage.setItem('fl_calories', JSON.stringify(State.calories));
+    localStorage.setItem('fl_activeDiet', State.activeDiet);
+    renderAll(); alert('Import completato');
+  } catch(e){ alert('JSON non valido'); }
+});
+
+// save & load basic
+qs('#saveBtn').addEventListener('click', ()=> {
+  localStorage.setItem('fl_builder', JSON.stringify(State.builder));
+  localStorage.setItem('fl_programs', JSON.stringify(State.programs));
+  localStorage.setItem('fl_meals', JSON.stringify(State.meals));
+  localStorage.setItem('fl_calories', JSON.stringify(State.calories));
+  localStorage.setItem('fl_activeDiet', State.activeDiet);
+  alert('Dati salvati localmente');
+});
+loadLocalBtn.addEventListener('click', ()=> {
+  State.builder = JSON.parse(localStorage.getItem('fl_builder')||'[]');
+  State.programs = JSON.parse(localStorage.getItem('fl_programs')||'{}');
+  State.meals = JSON.parse(localStorage.getItem('fl_meals')||'{}');
+  State.calories = JSON.parse(localStorage.getItem('fl_calories')||'{"dates":[],"values":[]}');
+  State.activeDiet = localStorage.getItem('fl_activeDiet') || State.activeDiet;
+  renderAll(); alert('Dati caricati');
+});
+
+// share program (data-URI in hash)
+shareBtn.addEventListener('click', ()=> {
+  const plan = State.builder.length ? State.builder : (Object.values(State.programs)[0]?.ex || []);
+  if(!plan.length) return alert('Nessun piano da condividere');
+  const payload = {ex: plan, created: new Date().toISOString()};
+  const uri = location.origin + location.pathname + '#data=' + encodeURIComponent(JSON.stringify(payload));
+  navigator.clipboard?.writeText(uri).then(()=> alert('Link copiato negli appunti'), ()=> prompt('Copia link:', uri));
+});
+
+// when loaded with hash data, import
+if(location.hash && location.hash.startsWith('#data=')){
+  try{
+    const obj = JSON.parse(decodeURIComponent(location.hash.slice(6)));
+    if(obj.ex){ State.builder = obj.ex; saveBuilder(); alert('Piano importato dal link'); }
+  } catch(e){}
+}
+
+// helper save builder
+function saveBuilder(){ localStorage.setItem('fl_builder', JSON.stringify(State.builder)); }
+
+// render meals/diets/programs
+function renderAll(){
+  renderPresets(); renderBuilder(); renderDiets(); renderMeals(); updateChart();
+}
+renderAll();
+
+// small interactions
+qs('#addCalBtn')?.addEventListener('click', ()=>{}); // already wired
+qs('#exportDietBtn')?.addEventListener('click', ()=> {
+  const diet = DIETS.find(d=>d.id===State.activeDiet) || DIETS[0];
+  const blob = new Blob([JSON.stringify(diet,null,2)], {type:'application/json'}); const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = diet.id + '-dieta.json'; a.click(); URL.revokeObjectURL(url);
+});
+
+// beep on copy & misc
+qs('#shareBtn').addEventListener('click', ()=> beep(900,0.06,0.08));
+
+// autosave builder every 8s
+setInterval(()=> saveBuilder(), 8000);
+
+</script>
+</body>
+</html>
