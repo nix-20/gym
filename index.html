@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Allenamenti Pro — Potenziato</title>
+  <meta name="description" content="Pagina unica per allenamenti, timer, e 3 piani dietetici interattivi. Salvataggi localStorage, responsiva, accessibile." />
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --muted:#9aa6b2; --accent:#06b6d4; --accent-2:#ef4444; --glass: rgba(255,255,255,0.03);
+      --radius:14px; --gap:16px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,var(--bg),#031024);color:#e6eef6;line-height:1.45;-webkit-font-smoothing:antialiased;padding:28px}
+    .container{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 380px;gap:28px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    h1{margin:0;font-size:1.6rem}
+    p.lead{margin:4px 0 0;color:var(--muted)}
+    .card{background:linear-gradient(180deg,var(--card),rgba(10,16,26,0.6));padding:18px;border-radius:var(--radius);box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    .grid{display:grid;gap:12px}
+
+    /* Left column layout */
+    .left{display:flex;flex-direction:column;gap:18px}
+    .workout-list{display:flex;flex-direction:column;gap:10px}
+    .workout{display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:12px;background:var(--glass)}
+    .workout h3{margin:0;font-size:1rem}
+    .btn{appearance:none;border:0;padding:8px 12px;border-radius:10px;background:linear-gradient(90deg,var(--accent),#3b82f6);color:#021023;font-weight:600;cursor:pointer}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--accent)}
+    .tiny{padding:6px 10px;font-size:0.9rem}
+
+    /* builder */
+    .builder{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .form-row{display:flex;gap:8px}
+    label{font-size:0.85rem;color:var(--muted)}
+    input[type=number],select,input[type=text]{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+
+    /* Timer */
+    .timer{display:flex;align-items:center;gap:12px}
+    .timer-display{font-size:1.45rem;font-weight:700;background:rgba(255,255,255,0.02);padding:10px 14px;border-radius:10px}
+
+    /* Right column */
+    .right{display:flex;flex-direction:column;gap:18px}
+    .diete-list{display:flex;flex-direction:column;gap:12px}
+    .dieta{padding:12px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent)}
+    .dieta h4{margin:0}
+    .dieta .meta{color:var(--muted);font-size:0.9rem;margin-top:6px}
+    .collapse{max-height:0;overflow:hidden;transition:max-height 300ms ease}
+    .collapse.open{max-height:600px;padding-top:12px}
+
+    /* Meals */
+    .meal{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:10px;background:rgba(255,255,255,0.01)}
+    .checkbox{display:inline-flex;align-items:center;gap:8px}
+
+    footer{margin-top:18px;color:var(--muted);font-size:0.85rem;text-align:center}
+
+    /* Responsive */
+    @media(max-width:980px){.container{grid-template-columns:1fr;padding:12px}.right{order:2}.left{order:1}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <main class="left">
+      <header>
+        <div>
+          <h1>Allenamenti Pro — versione potenziata</h1>
+          <p class="lead">Schede rapide, timer avanzato, salvataggi locali e piani dietetici integrati.</p>
+        </div>
+        <div>
+          <button class="btn" id="exportBtn" title="Esporta dati">Esporta</button>
+        </div>
+      </header>
+
+      <section class="card grid">
+        <h2 style="margin:0">Schede allenamento</h2>
+        <div class="workout-list" id="presetList">
+          <!-- popolato da JS -->
+        </div>
+        <div style="display:flex;gap:10px;margin-top:6px">
+          <button class="btn ghost" id="newCustom">Crea la tua scheda</button>
+          <button class="btn" id="loadSaved">Carica ultima</button>
+        </div>
+      </section>
+
+      <section class="card grid">
+        <h2 style="margin:0">Costruttore esercizi</h2>
+        <div class="builder">
+          <div>
+            <label for="exName">Nome esercizio</label>
+            <input id="exName" type="text" placeholder="es. Push-up">
+          </div>
+          <div>
+            <label for="exReps">Ripetizioni / Durata (s)</label>
+            <input id="exReps" type="number" min="1" value="12">
+          </div>
+          <div>
+            <label for="exRest">Recupero (s)</label>
+            <input id="exRest" type="number" min="5" value="30">
+          </div>
+          <div>
+            <label for="exType">Tipo</label>
+            <select id="exType">
+              <option value="reps">Ripetizioni</option>
+              <option value="time">Tempo</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <button class="btn" id="addEx">Aggiungi esercizio</button>
+          <button class="btn ghost" id="clearEx">Pulisci</button>
+        </div>
+        <div id="customList" style="margin-top:10px"></div>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <input id="programName" type="text" placeholder="Nome scheda" style="flex:1;padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.04)">
+          <button class="btn" id="saveProgram">Salva scheda</button>
+        </div>
+      </section>
+
+      <section class="card grid">
+        <h2 style="margin:0">Timer & Riproduzione</h2>
+        <div class="timer">
+          <div class="timer-display" id="timerDisplay">00:00</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn tiny" id="startTimer">Start</button>
+            <button class="btn tiny" id="pauseTimer">Pausa</button>
+            <button class="btn ghost tiny" id="resetTimer">Reset</button>
+          </div>
+        </div>
+        <div style="margin-top:10px;color:var(--muted)">Stato: <span id="timerState">fermo</span></div>
+        <div style="margin-top:8px" id="playControls"></div>
+      </section>
+
+    </main>
+
+    <aside class="right">
+      <section class="card">
+        <h2 style="margin:0">Piani Dietetici</h2>
+        <p class="lead" style="margin-top:6px">3 diete integrate. Scegli, leggi dettagli, aggiungi al tuo programma e traccia i pasti.</p>
+        <div class="diete-list" id="dieteContainer">
+          <!-- popolato da JS -->
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 style="margin:0">Tracker pasti</h2>
+        <p class="meta">Spunta i pasti completati oggi — i dati restano sul dispositivo.</p>
+        <div id="mealsToday" style="margin-top:10px"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn" id="clearMeals">Pulisci giorno</button>
+          <button class="btn ghost" id="applyDiet">Applica dieta selezionata</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 style="margin:0">Impostazioni & Backup</h2>
+        <p class="meta">Salva o ripristina i tuoi programmi. I dati restano in <code>localStorage</code>.</p>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn" id="saveAll">Salva tutto</button>
+          <button class="btn ghost" id="resetAll">Reset completo</button>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <footer>Versione potenziata — codice generato. I dati rimangono sul tuo browser.</footer>
+
+  <script>
+    /* ========== DATI PREIMPOSTATI ========== */
+    const presets = [
+      {id:'p20',name:'Scheda 20 Minuti',desc:'Allenamento HIIT breve',ex:[{name:'Jumping Jacks',type:'time',value:40,rest:20},{name:'Push-up',type:'reps',value:15,rest:30},{name:'Squat',type:'reps',value:20,rest:30}]},
+      {id:'p45',name:'Scheda 45 Minuti',desc:'Forza + Cardio',ex:[{name:'Corsa',type:'time',value:600,rest:60},{name:'Affondi',type:'reps',value:20,rest:30},{name:'Plank',type:'time',value:60,rest:30}]},
+      {id:'p60',name:'Scheda 1 Ora',desc:'Sessione full body',ex:[{name:'Riscaldamento',type:'time',value:300,rest:60},{name:'Stacco (leggero)',type:'reps',value:12,rest:60},{name:'Circuito',type:'time',value:900,rest:120}]}
+    ];
+
+    const diete = [
+      {
+        id:'med', title:'Dieta Mediterranea', short:'Bilanciata, ideale per sostenibilità e salute',
+        desc:`Caratteristiche principali: molta frutta, verdura, legumi, cereali integrali, pesce e olio d'oliva. Limitare zuccheri raffinati e cibi ultraprocessati. Ideale per mantenimento e migliorare composizione corporea.`,
+        day:[
+          {meal:'Colazione',items:['Yogurt greco + frutta','2 fette pane integrale','1 cucchiaino olio d\'oliva']},
+          {meal:'Spuntino',items:['Mandorle 20g','1 frutto']},
+          {meal:'Pranzo',items:['Insalata di legumi','Verdure grigliate','1 fetta pane integrale']},
+          {meal:'Merenda',items:['Hummus + verdure crude']},
+          {meal:'Cena',items:['Filetto di pesce al forno','Orzo/Quinoa','Insalata mista']}
+        ]
+      },
+      {
+        id:'lowc', title:'Dieta Low‑Carb', short:'Ridotto apporto di carboidrati, più proteine e grassi buoni',
+        desc:`Ridurre pane, pasta, riso e zuccheri. Aumentare proteine (carne magra, pesce, uova), verdure a basso contenuto di amido e grassi sani (avocado, noci, olio). Ideale per perdita di peso o controllo glicemico.`,
+        day:[
+          {meal:'Colazione',items:['Uova strapazzate','Spinaci saltati','Avocado']},
+          {meal:'Spuntino',items:['Formaggio fresco 30g','10 noci']},
+          {meal:'Pranzo',items:['Insalata di pollo','Verdure miste']},
+          {meal:'Merenda',items:['Yogurt greco senza zucchero']},
+          {meal:'Cena',items:['Salmone alla piastra','Broccoli al vapore']}
+        ]
+      },
+      {
+        id:'veg', title:'Dieta Vegana', short:'Interamente vegetale, attenta alle proteine e micronutrienti',
+        desc:`100% vegetale: legumi, cereali integrali, tofu/tempeh, semi e noci. Integrare vitamina B12 e fare attenzione a ferro e Omega-3. Ideale per chi segue uno stile di vita etico/green.`,
+        day:[
+          {meal:'Colazione',items:['Porridge avena + latte vegetale','Frutta secca']},
+          {meal:'Spuntino',items:['Mix semi (chia, lino)','1 frutto']},
+          {meal:'Pranzo',items:['Buddha bowl con quinoa e ceci','Verdure arrosto']},
+          {meal:'Merenda',items:['Barretta a base di datteri e noci']},
+          {meal:'Cena',items:['Tofu saltato con verdure','Riso integrale']}
+        ]
+      }
+    ];
+
+    /* ========== STATO E UTILITÀ ========== */
+    const state = {
+      customEx:[],
+      savedPrograms: JSON.parse(localStorage.getItem('savedPrograms')||'{}'),
+      selectedProgram:null,
+      timer:null,
+      timerSeconds:0,
+      timerRunning:false,
+      currentStep:0,
+      mealsChecked: JSON.parse(localStorage.getItem('mealsChecked')||'{}'),
+      activeDiet: localStorage.getItem('activeDiet') || null
+    };
+
+    /* ========= RENDER PRESET WORKOUTS ========== */
+    const presetList = document.getElementById('presetList');
+    function renderPresets(){
+      presetList.innerHTML='';
+      presets.forEach(p=>{
+        const el = document.createElement('div'); el.className='workout card';
+        el.innerHTML = `<div><h3>${p.name}</h3><div style="color:var(--muted);font-size:0.9rem">${p.desc}</div></div><div style="display:flex;gap:8px"><button class='btn ghost tiny' data-id='${p.id}' data-action='view'>Dettagli</button><button class='btn tiny' data-id='${p.id}' data-action='start'>Avvia</button></div>`;
+        presetList.appendChild(el);
+      });
+    }
+
+    /* ========= CUSTOM PROGRAM BUILDER ========== */
+    const customList = document.getElementById('customList');
+    function renderCustom(){
+      customList.innerHTML='';
+      if(state.customEx.length===0){ customList.innerHTML='<div style="color:var(--muted)">Nessun esercizio aggiunto</div>'; return }
+      state.customEx.forEach((ex,i)=>{
+        const d = document.createElement('div'); d.className='workout';
+        d.innerHTML = `<div><strong>${ex.name}</strong><div style="color:var(--muted);font-size:0.9rem">${ex.type==='time'?ex.value+" s":ex.value+" rip"} • recupero ${ex.rest}s</div></div><div style='display:flex;gap:8px'><button class='btn ghost tiny' data-i='${i}' data-action='up'>↑</button><button class='btn ghost tiny' data-i='${i}' data-action='down'>↓</button><button class='btn tiny' data-i='${i}' data-action='del'>Elimina</button></div>`;
+        customList.appendChild(d);
+      });
+    }
+
+    document.getElementById('addEx').addEventListener('click',()=>{
+      const name = document.getElementById('exName').value.trim();
+      const value = Number(document.getElementById('exReps').value)||10;
+      const rest = Number(document.getElementById('exRest').value)||30;
+      const type = document.getElementById('exType').value;
+      if(!name) return alert('Inserisci il nome dell\'esercizio');
+      state.customEx.push({name,type,value,rest}); renderCustom();
+      document.getElementById('exName').value='';
+    });
+
+    document.getElementById('clearEx').addEventListener('click',()=>{ state.customEx=[]; renderCustom(); });
+
+    customList.addEventListener('click',(e)=>{
+      const action = e.target.getAttribute('data-action');
+      const i = Number(e.target.getAttribute('data-i'));
+      if(!action) return;
+      if(action==='del') state.customEx.splice(i,1);
+      if(action==='up' && i>0) state.customEx.splice(i-1,0, state.customEx.splice(i,1)[0]);
+      if(action==='down' && i<state.customEx.length-1) state.customEx.splice(i+1,0, state.customEx.splice(i,1)[0]);
+      renderCustom();
+    });
+
+    document.getElementById('saveProgram').addEventListener('click',()=>{
+      const name = document.getElementById('programName').value.trim()||('Scheda '+new Date().toLocaleString());
+      if(state.customEx.length===0) return alert('Aggiungi almeno un esercizio');
+      const id = 'prog_'+Date.now();
+      state.savedPrograms[id]={id,name,ex:state.customEx};
+      localStorage.setItem('savedPrograms', JSON.stringify(state.savedPrograms));
+      alert('Scheda salvata!');
+      state.customEx=[]; document.getElementById('programName').value=''; renderCustom(); renderSavedList();
+    });
+
+    document.getElementById('newCustom').addEventListener('click',()=>{ window.scrollTo({top:0,behavior:'smooth'}); document.getElementById('exName').focus(); });
+
+    function renderSavedList(){
+      // mostra programmi salvati insieme ai preset
+      // aggiungiamo dopo i preset
+      const wrapper = document.createElement('div'); wrapper.style.marginTop='8px'; wrapper.innerHTML='<strong style="font-size:0.95rem">Programmi salvati</strong>';
+      Object.values(state.savedPrograms).forEach(p=>{
+        const div = document.createElement('div'); div.className='workout';
+        div.innerHTML = `<div><strong>${p.name}</strong><div style="color:var(--muted);font-size:0.9rem">${p.ex.length} esercizi</div></div><div style='display:flex;gap:8px'><button class='btn ghost tiny' data-id='${p.id}' data-action='viewSaved'>Dettagli</button><button class='btn tiny' data-id='${p.id}' data-action='startSaved'>Avvia</button></div>`;
+        wrapper.appendChild(div);
+      });
+      // elimina precedente se esiste
+      const existing = document.querySelector('#presetList .savedWrapper');
+      if(existing) existing.remove();
+      wrapper.classList.add('savedWrapper'); presetList.appendChild(wrapper);
+    }
+
+    /* ========= TIMER E PLAY ========= */
+    const timerDisplay = document.getElementById('timerDisplay');
+    const timerState = document.getElementById('timerState');
+    const playControls = document.getElementById('playControls');
+
+    function secsToMMSS(s){ const mm = Math.floor(s/60).toString().padStart(2,'0'); const ss = (s%60).toString().padStart(2,'0'); return `${mm}:${ss}` }
+
+    document.getElementById('startTimer').addEventListener('click',()=>{
+      if(state.timerRunning) return;
+      state.timerRunning=true; timerState.textContent='in esecuzione';
+      state.timer = setInterval(()=>{ state.timerSeconds++; timerDisplay.textContent=secsToMMSS(state.timerSeconds) },1000);
+    });
+    document.getElementById('pauseTimer').addEventListener('click',()=>{
+      if(state.timer) clearInterval(state.timer); state.timerRunning=false; timerState.textContent='in pausa';
+    });
+    document.getElementById('resetTimer').addEventListener('click',()=>{ if(state.timer) clearInterval(state.timer); state.timerSeconds=0; state.timerRunning=false; timerDisplay.textContent='00:00'; timerState.textContent='fermo'; });
+
+    // play per avviare un programma passo-passo
+    function preparePlay(exList){
+      state.currentStep=0; state.playList = exList.slice(); renderPlay();
+    }
+
+    function renderPlay(){
+      playControls.innerHTML='';
+      if(!state.playList || state.playList.length===0) return playControls.innerHTML='<div style="color:var(--muted)">Nessun programma in riproduzione</div>';
+      const cur = state.playList[state.currentStep];
+      const html = document.createElement('div'); html.style.display='grid'; html.style.gap='8px';
+      html.innerHTML = `<div style="font-weight:700">Step ${state.currentStep+1}/${state.playList.length}: ${cur.name}</div><div style="color:var(--muted)">${cur.type==='time'?cur.value+' s':cur.value+' ripetizioni'} — Recupero ${cur.rest}s</div>`;
+      const btns = document.createElement('div'); btns.style.display='flex'; btns.style.gap='8px';
+      const start = document.createElement('button'); start.className='btn tiny'; start.textContent='Esegui step'; start.onclick=()=>runStep(cur);
+      const next = document.createElement('button'); next.className='btn ghost tiny'; next.textContent='Avanti'; next.onclick=()=>{ if(state.currentStep<state.playList.length-1){ state.currentStep++; renderPlay(); } else alert('Programma terminato') };
+      btns.appendChild(start); btns.appendChild(next);
+      html.appendChild(btns);
+      playControls.appendChild(html);
+    }
+
+    let stepTimer=null;
+    function runStep(step){
+      // se è tempo, conta, altrimenti simula ripetizioni con un conto alla rovescia per il recupero
+      if(step.type==='time'){
+        let remaining = step.value; if(stepTimer) clearInterval(stepTimer);
+        timerState.textContent='eseguendo esercizio';
+        timerDisplay.textContent=secsToMMSS(remaining);
+        stepTimer=setInterval(()=>{ remaining--; timerDisplay.textContent=secsToMMSS(remaining); if(remaining<=0){ clearInterval(stepTimer); startRest(step.rest) } },1000);
+      } else {
+        // per le ripetizioni: conto alla rovescia simbolico di 10s per eseguire
+        let simb = 10; timerState.textContent='eseguendo (rip)'; timerDisplay.textContent=secsToMMSS(simb);
+        if(stepTimer) clearInterval(stepTimer);
+        stepTimer=setInterval(()=>{ simb--; timerDisplay.textContent=secsToMMSS(simb); if(simb<=0){ clearInterval(stepTimer); startRest(step.rest) } },1000);
+      }
+    }
+    function startRest(sec){ let r=sec; timerState.textContent='recupero'; timerDisplay.textContent=secsToMMSS(r); if(stepTimer) clearInterval(stepTimer); stepTimer=setInterval(()=>{ r--; timerDisplay.textContent=secsToMMSS(r); if(r<=0){ clearInterval(stepTimer); timerState.textContent='in pausa'; if(state.currentStep<state.playList.length-1){ state.currentStep++; renderPlay(); } else alert('Programma completato') } },1000); }
+
+    /* ========= INTERAZIONI PRESET ========== */
+    presetList.addEventListener('click',(e)=>{
+      const id = e.target.getAttribute('data-id'); const action = e.target.getAttribute('data-action');
+      if(!id) return;
+      if(action==='view'){ const p = presets.find(x=>x.id===id); if(p) alert(p.name+'\n\n'+p.ex.map(x=>x.name+' • '+(x.type==='time'?x.value+'s':x.value+' rip')+' • rest '+x.rest+'s').join('\n')) }
+      if(action==='start'){ const p = presets.find(x=>x.id===id); if(p){ preparePlay(p.ex); renderPlay(); } }
+      if(action==='viewSaved'){ const p = state.savedPrograms[id]; if(p) alert(p.name+'\n\n'+p.ex.map(x=>x.name+' • '+(x.type==='time'?x.value+'s':x.value+' rip')+' • rest '+x.rest+'s').join('\n')) }
+      if(action==='startSaved'){ const p = state.savedPrograms[id]; if(p){ preparePlay(p.ex); renderPlay(); } }
+    });
+
+    /* ========= DIETE: RENDER E APPLICA ========== */
+    const dieteContainer = document.getElementById('dieteContainer');
+    function renderDiete(){
+      dieteContainer.innerHTML='';
+      diete.forEach(d=>{
+        const el = document.createElement('div'); el.className='dieta';
+        el.innerHTML = `<div style='display:flex;justify-content:space-between;align-items:center'><div><h4>${d.title}</h4><div class='meta'>${d.short}</div></div><div><button class='btn tiny' data-id='${d.id}' data-action='toggle'>Dettagli</button><button class='btn ghost tiny' data-id='${d.id}' data-action='select'>Seleziona</button></div></div><div class='collapse' id='c_${d.id}'><div style='margin-top:8px;color:var(--muted)'>${d.desc}</div><div style='margin-top:8px'>${renderDaySample(d.day)}</div></div>`;
+        dieteContainer.appendChild(el);
+      });
+      // evidenzia selezione
+      if(state.activeDiet){ const btns = document.querySelectorAll(`[data-action='select']`); btns.forEach(b=>{ if(b.getAttribute('data-id')===state.activeDiet) b.textContent='Attiva ✓'; else b.textContent='Seleziona' }) }
+    }
+    function renderDaySample(day){ return day.map(m=>`<div style="margin-top:8px"><strong>${m.meal}</strong><ul style='margin:6px 0 0 18px;color:var(--muted)'>${m.items.map(i=>'<li>'+i+'</li>').join('')}</ul></div>`).join('') }
+
+    dieteContainer.addEventListener('click',(e)=>{
+      const action = e.target.getAttribute('data-action'); const id = e.target.getAttribute('data-id');
+      if(!action) return;
+      if(action==='toggle'){ const c = document.getElementById('c_'+id); c.classList.toggle('open'); }
+      if(action==='select'){ state.activeDiet = id; localStorage.setItem('activeDiet',id); renderDiete(); alert('Dieta selezionata: '+(diete.find(d=>d.id===id).title)); }
+    });
+
+    /* ========= TRACKER PASTI ========= */
+    const mealsToday = document.getElementById('mealsToday');
+    function renderMeals(){
+      mealsToday.innerHTML='';
+      const diet = diete.find(d=>d.id===state.activeDiet) || diete[0];
+      if(!diet) return mealsToday.innerHTML='<div style="color:var(--muted)">Seleziona una dieta per visualizzare i pasti</div>';
+      diet.day.forEach(m=>{
+        const id = state.activeDiet+'_'+m.meal;
+        const checked = !!state.mealsChecked[id];
+        const el = document.createElement('div'); el.className='meal';
+        el.innerHTML = `<div><strong>${m.meal}</strong><div style='color:var(--muted);font-size:0.9rem'>${m.items.join(' • ')}</div></div><div class='checkbox'><input type='checkbox' data-id='${id}' ${checked?'checked':''}></div>`;
+        mealsToday.appendChild(el);
+      });
+    }
+
+    mealsToday.addEventListener('change',(e)=>{
+      const id = e.target.getAttribute('data-id'); if(!id) return; const checked = e.target.checked; state.mealsChecked[id]=checked; localStorage.setItem('mealsChecked', JSON.stringify(state.mealsChecked));
+    });
+    document.getElementById('clearMeals').addEventListener('click',()=>{ state.mealsChecked={}; localStorage.setItem('mealsChecked', JSON.stringify(state.mealsChecked)); renderMeals(); });
+    document.getElementById('applyDiet').addEventListener('click',()=>{ renderMeals(); alert('Dieta applicata ai pasti'); });
+
+    /* ========= SALVATAGGIO & BACKUP ========= */
+    document.getElementById('saveAll').addEventListener('click',()=>{ localStorage.setItem('savedPrograms', JSON.stringify(state.savedPrograms)); localStorage.setItem('mealsChecked', JSON.stringify(state.mealsChecked)); localStorage.setItem('activeDiet', state.activeDiet||''); alert('Dati salvati localmente') });
+    document.getElementById('resetAll').addEventListener('click',()=>{ if(!confirm('Sei sicuro? Questo resetterà tutti i programmi salvati e le impostazioni.')) return; localStorage.clear(); state.savedPrograms={}; state.mealsChecked={}; state.activeDiet=null; renderSavedList(); renderDiete(); renderMeals(); alert('Reset completato') });
+    document.getElementById('exportBtn').addEventListener('click',()=>{
+      const payload = {savedPrograms:state.savedPrograms,mealsChecked:state.mealsChecked,activeDiet:state.activeDiet};
+      const blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+      const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='fitness-backup-'+Date.now()+'.json'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('loadSaved').addEventListener('click',()=>{
+      const all = JSON.parse(localStorage.getItem('savedPrograms')||'{}'); state.savedPrograms = all; renderSavedList(); alert('Caricati programmi locali')
+    });
+
+    /* ========= BOOT ========== */
+    function boot(){ renderPresets(); renderCustom(); renderSavedList(); renderDiete(); renderMeals(); }
+    boot();
+
+    // inizializza selezione dieta salvata
+    if(state.activeDiet){ /* nothing — renderDiete already handles button text */ }
+
+  </script>
+</body>
+</html>
